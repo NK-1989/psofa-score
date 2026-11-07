@@ -62,6 +62,13 @@ button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
 details{font-size:.84rem;color:var(--muted)}
 details summary{cursor:pointer;color:var(--text);font-weight:600}
 details ul{padding-left:1.2em;margin:6px 0}
+.tblwrap{overflow-x:auto;margin-top:8px}
+table.gcs{width:100%;border-collapse:collapse;font-size:.85rem;min-width:420px}
+table.gcs th,table.gcs td{border:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}
+table.gcs thead th{background:var(--accent-bg);color:var(--text)}
+table.gcs tr.grp th{background:var(--na);color:var(--text)}
+table.gcs td:first-child{width:3.5em;text-align:center;font-weight:700;color:var(--text)}
+table.gcs td{color:var(--text)}
 .foot{font-size:.8rem;color:var(--muted);margin-top:14px}
 </style>
 </head>
@@ -151,6 +158,35 @@ details ul{padding-left:1.2em;margin:6px 0}
         </label>
       </div>
       <p class="detail" id="d-neuro"></p>
+      <details style="margin-top:8px">
+        <summary>小児GCSの採点表を見る（E＋M＋V）</summary>
+        <div class="tblwrap">
+        <table class="gcs">
+          <thead><tr><th>スコア</th><th>小児</th><th>乳児</th></tr></thead>
+          <tbody>
+            <tr class="grp"><th colspan="3">開眼（E）</th></tr>
+            <tr><td>4</td><td>自発的に開眼</td><td>自発的に開眼</td></tr>
+            <tr><td>3</td><td>呼びかけに応じて開眼</td><td>大声の呼びかけに応じて開眼</td></tr>
+            <tr><td>2</td><td>痛みに応じて開眼</td><td>痛みに応じて開眼</td></tr>
+            <tr><td>1</td><td>反応なし</td><td>反応なし</td></tr>
+            <tr class="grp"><th colspan="3">最良の運動（M）反応</th></tr>
+            <tr><td>6</td><td>指示に従う</td><td>自発的に運動</td></tr>
+            <tr><td>5</td><td>痛み刺激の部位に手足をもってくる</td><td>触れると逃避する</td></tr>
+            <tr><td>4</td><td>四肢屈曲反応：逃避</td><td>四肢屈曲反応：逃避</td></tr>
+            <tr><td>3</td><td>四肢屈曲反応：異常（除皮質硬直）</td><td>四肢屈曲反応：異常（除皮質硬直）</td></tr>
+            <tr><td>2</td><td>四肢伸展反応（除脳硬直）</td><td>四肢伸展反応（除脳硬直）</td></tr>
+            <tr><td>1</td><td>反応なし</td><td>反応なし</td></tr>
+            <tr class="grp"><th colspan="3">最良の言語（V）反応</th></tr>
+            <tr><td>5</td><td>見当識のある会話</td><td>ご機嫌，クークーという声と片言語</td></tr>
+            <tr><td>4</td><td>見当識がない，混迷</td><td>啼泣しているが落ち着いている</td></tr>
+            <tr><td>3</td><td>不適切な言葉を発する</td><td>持続的に不適切な啼泣／叫び声</td></tr>
+            <tr><td>2</td><td>理解不能な発声</td><td>うめき，痛みに反応してうなる</td></tr>
+            <tr><td>1</td><td>反応なし</td><td>反応なし</td></tr>
+          </tbody>
+        </table>
+        </div>
+        <p class="detail">出典: PALSプロバイダーマニュアルの小児GCS表。合計 = E + M + V（3〜15点）。pSOFA神経は 15→0点、13–14→1点、10–12→2点、6–9→3点、&lt;6→4点。</p>
+      </details>
     </section>
 
     <section class="card">
