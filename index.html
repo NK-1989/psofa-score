@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pSOFA 計算</title>
+<style>
+:root{
+  --bg:#f4f6f9; --card:#fff; --text:#1d2733; --muted:#5d6b7c; --line:#d9e0e8;
+  --accent:#1b6ca8; --accent-bg:#e6f1fa;
+  --s0:#e8f5ec; --s0t:#17653a; --s1:#fff6d6; --s1t:#7a5b00; --s2:#ffe5cc; --s2t:#9a4a00;
+  --s3:#ffd6d6; --s3t:#a11d1d; --s4:#f6c3d0; --s4t:#7d0f2d; --na:#eceff3; --nat:#6b7785;
+  --warn:#fff3cd; --warnt:#664d03;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#12171d; --card:#1b232c; --text:#e6ebf1; --muted:#9aa8b8; --line:#2f3b48;
+    --accent:#5fb0ea; --accent-bg:#17303f;
+    --s0:#173b27; --s0t:#8be0a9; --s1:#3d3510; --s1t:#f1d36a; --s2:#4a2f12; --s2t:#ffb877;
+    --s3:#4d1b1b; --s3t:#ff9d9d; --s4:#4d1527; --s4t:#ff9ab8; --na:#26303b; --nat:#8d9aa9;
+    --warn:#3d3510; --warnt:#f1d36a;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 "Yu Gothic UI","Meiryo",system-ui,sans-serif}
+.wrap{max-width:1040px;margin:0 auto;padding:16px}
+h1{font-size:1.4rem;margin:8px 0 2px}
+.sub{color:var(--muted);font-size:.88rem;margin:0 0 14px}
+.layout{display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start}
+@media (max-width:820px){.layout{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+.card h2{font-size:1.02rem;margin:0 0 8px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.badge{min-width:3.2em;text-align:center;padding:2px 10px;border-radius:999px;font-weight:700;font-size:.95rem;background:var(--na);color:var(--nat)}
+.b0{background:var(--s0);color:var(--s0t)}.b1{background:var(--s1);color:var(--s1t)}
+.b2{background:var(--s2);color:var(--s2t)}.b3{background:var(--s3);color:var(--s3t)}.b4{background:var(--s4);color:var(--s4t)}
+.row{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end}
+label{display:flex;flex-direction:column;font-size:.82rem;color:var(--muted);gap:3px}
+input[type=number],select{font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 9px;width:9.5em;min-height:40px}
+select{width:auto;min-width:6em}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.chk{flex-direction:row;align-items:center;gap:8px;color:var(--text);font-size:.92rem;min-height:40px}
+.chk input{width:20px;height:20px}
+.detail{margin:8px 0 0;font-size:.85rem;color:var(--muted)}
+.note{background:var(--warn);color:var(--warnt);border-radius:8px;padding:8px 10px;font-size:.84rem;margin-top:8px}
+.note[hidden]{display:none}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg label{flex-direction:row;color:var(--text);padding:7px 12px;cursor:pointer;font-size:.88rem;min-height:40px;align-items:center}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label:has(input:checked){background:var(--accent);color:#fff}
+.seg label:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:-2px}
+aside .card{position:sticky;top:12px}
+.total{font-size:3rem;font-weight:800;line-height:1.1;text-align:center}
+.total small{font-size:1rem;color:var(--muted);font-weight:500}
+table.sum{width:100%;border-collapse:collapse;font-size:.9rem;margin:10px 0}
+table.sum td{padding:4px 0;border-bottom:1px solid var(--line)}
+table.sum td:last-child{text-align:right;font-weight:700}
+.sepsis{margin-top:10px;padding:10px;border-radius:8px;background:var(--accent-bg);font-size:.9rem}
+.sepsis strong{display:block;font-size:1rem}
+.btns{display:flex;gap:8px;margin-top:10px}
+button{font:inherit;flex:1;min-height:42px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);cursor:pointer}
+button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+details{font-size:.84rem;color:var(--muted)}
+details summary{cursor:pointer;color:var(--text);font-weight:600}
+details ul{padding-left:1.2em;margin:6px 0}
+.foot{font-size:.8rem;color:var(--muted);margin-top:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>pSOFA 計算（Pediatric SOFA）</h1>
+  <p class="sub">Matics &amp; Sanchez-Pinto. JAMA Pediatr 2017;171(10):e172352 の Table 1 に基づく。入力はブラウザ内で処理され、保存・送信されません。</p>
+
+  <div class="layout">
+  <main>
+    <section class="card">
+      <h2>年齢</h2>
+      <div class="row">
+        <label>年齢
+          <input type="number" id="age" min="0" step="any" inputmode="decimal" placeholder="例: 3">
+        </label>
+        <label>単位
+          <select id="ageUnit">
+            <option value="d">日</option>
+            <option value="m">か月</option>
+            <option value="y" selected>歳</option>
+          </select>
+        </label>
+      </div>
+      <p class="detail" id="ageInfo">循環（MAP）と腎（クレアチニン）の年齢群の判定に使います。</p>
+    </section>
+
+    <section class="card">
+      <h2>呼吸 <span class="badge" id="b-resp">–</span></h2>
+      <div class="row">
+        <div class="seg" role="radiogroup" aria-label="呼吸の指標">
+          <label><input type="radio" name="rmode" value="pf" checked>PaO₂/FiO₂</label>
+          <label><input type="radio" name="rmode" value="sf">SpO₂/FiO₂</label>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <label id="l-pao2">PaO₂ (mmHg)<input type="number" id="pao2" min="0" step="any" inputmode="decimal"></label>
+        <label id="l-spo2" hidden>SpO₂ (%)<input type="number" id="spo2" min="0" max="100" step="any" inputmode="decimal"></label>
+        <label>FiO₂ (%)<input type="number" id="fio2" min="21" max="100" step="any" inputmode="decimal" placeholder="21–100"></label>
+        <label class="chk"><input type="checkbox" id="support">呼吸補助あり</label>
+      </div>
+      <p class="detail" id="d-resp"></p>
+      <div class="note" id="n-resp" hidden></div>
+    </section>
+
+    <section class="card">
+      <h2>凝固 <span class="badge" id="b-coag">–</span></h2>
+      <div class="row">
+        <label>血小板数 (×10³/μL)<input type="number" id="plt" min="0" step="any" inputmode="decimal"></label>
+      </div>
+      <p class="detail" id="d-coag"></p>
+    </section>
+
+    <section class="card">
+      <h2>肝 <span class="badge" id="b-liver">–</span></h2>
+      <div class="row">
+        <label>総ビリルビン<input type="number" id="bili" min="0" step="any" inputmode="decimal"></label>
+        <label>単位<select id="biliUnit"><option value="mg">mg/dL</option><option value="umol">μmol/L</option></select></label>
+      </div>
+      <p class="detail" id="d-liver"></p>
+    </section>
+
+    <section class="card">
+      <h2>循環 <span class="badge" id="b-cv">–</span></h2>
+      <div class="row">
+        <label>平均血圧 MAP (mmHg)<input type="number" id="map" min="0" step="any" inputmode="decimal"></label>
+      </div>
+      <p class="detail" style="margin-top:10px">血管作動薬の最大持続投与量 (μg/kg/min)。投与なしは空欄。</p>
+      <div class="row">
+        <label>ドパミン<input type="number" id="dopa" min="0" step="any" inputmode="decimal"></label>
+        <label>ドブタミン<input type="number" id="dobu" min="0" step="any" inputmode="decimal"></label>
+        <label>アドレナリン<input type="number" id="epi" min="0" step="any" inputmode="decimal"></label>
+        <label>ノルアドレナリン<input type="number" id="nor" min="0" step="any" inputmode="decimal"></label>
+      </div>
+      <p class="detail" id="d-cv"></p>
+    </section>
+
+    <section class="card">
+      <h2>神経 <span class="badge" id="b-neuro">–</span></h2>
+      <div class="row">
+        <label>小児用 Glasgow Coma Scale
+          <select id="gcs">
+            <option value="">未入力</option>
+            <option>15</option><option>14</option><option>13</option><option>12</option><option>11</option><option>10</option>
+            <option>9</option><option>8</option><option>7</option><option>6</option><option>5</option><option>4</option><option>3</option>
+          </select>
+        </label>
+      </div>
+      <p class="detail" id="d-neuro"></p>
+    </section>
+
+    <section class="card">
+      <h2>腎 <span class="badge" id="b-renal">–</span></h2>
+      <div class="row">
+        <label>血清クレアチニン<input type="number" id="cr" min="0" step="any" inputmode="decimal"></label>
+        <label>単位<select id="crUnit"><option value="mg">mg/dL</option><option value="umol">μmol/L</option></select></label>
+      </div>
+      <p class="detail" id="d-renal"></p>
+    </section>
+
+    <section class="card">
+      <h2>Sepsis-3 判定（任意）</h2>
+      <div class="row">
+        <label class="chk"><input type="checkbox" id="infect">感染（確定または疑い）あり</label>
+        <label>感染前の pSOFA<input type="number" id="base" min="0" max="24" step="1" value="0" inputmode="numeric"></label>
+        <label>乳酸<input type="number" id="lac" min="0" step="any" inputmode="decimal"></label>
+        <label>単位<select id="lacUnit"><option value="mmol">mmol/L</option><option value="mg">mg/dL</option></select></label>
+      </div>
+      <p class="detail">論文の定義: 感染があり pSOFA が感染前から2点以上上昇 → sepsis。sepsis に加え、血管作動薬の持続投与と最大乳酸 &gt;2 mmol/L (18 mg/dL) → septic shock。感染前の臓器障害が不明なら 0 とする。</p>
+    </section>
+
+    <details class="card">
+      <summary>採点表・注意点</summary>
+      <ul>
+        <li>各臓器は24時間のうち最悪値で採点。未測定の項目は正常（0点）として扱う（論文の規定どおり）。</li>
+        <li>呼吸: SpO₂/FiO₂ は SpO₂ ≤97% の値のみ使用。3・4点は呼吸補助ありの場合のみ付く（補助なしでは最大2点）。「呼吸補助」の具体的な範囲は論文に定義がなく、施設での判断に委ねられる。</li>
+        <li>循環: MAP は0・1点の判定にのみ使用、2〜4点は血管作動薬の用量で判定（最大持続投与量、1時間以上の投与）。</li>
+        <li>神経: 小児用GCSを使用。</li>
+        <li>18歳超（216か月超）の閾値は成人SOFAと同一。</li>
+        <li>表記の重なりの扱い: 論文 Table 1 では SpO₂/FiO₂ の2点が「221–264」と1点の「264–291」と重複し、ビリルビンの4点は「&gt;12.0」で12.0ちょうどの区分が空く。本ツールでは SpO₂/FiO₂ を 221以上264未満 → 2点、ビリルビンを 12.0以上 → 4点として扱う。クレアチニンの区分間の隙間（例 0.8–0.9 と 1.0–1.1 の間）は、下限値を超えた最も高い点数に割り当てる。</li>
+        <li>論文での位置づけ: 後ろ向き単一施設（PICU 8711 encounter）。最大pSOFAの院内死亡判別AUCは 0.94、最適カットオフは 8点超。日々の最大値に基づく結果で、単回の値から個別の死亡予測をするものではない。</li>
+        <li>本ツールは臨床判断の補助です。診療上の判断は担当医が行ってください。</li>
+      </ul>
+    </details>
+    <p class="foot">Matics TJ, Sanchez-Pinto LN. Adaptation and Validation of a Pediatric Sequential Organ Failure Assessment Score and Evaluation of the Sepsis-3 Definitions in Critically Ill Children. JAMA Pediatr. 2017;171(10):e172352. PMID: 28783810</p>
+  </main>
+
+  <aside>
+    <div class="card" aria-live="polite">
+      <div class="total"><span id="total">0</span> <small>/ 24 点</small></div>
+      <table class="sum">
+        <tr><td>呼吸</td><td id="s-resp">–</td></tr>
+        <tr><td>凝固</td><td id="s-coag">–</td></tr>
+        <tr><td>肝</td><td id="s-liver">–</td></tr>
+        <tr><td>循環</td><td id="s-cv">–</td></tr>
+        <tr><td>神経</td><td id="s-neuro">–</td></tr>
+        <tr><td>腎</td><td id="s-renal">–</td></tr>
+      </table>
+      <p class="detail" id="missing"></p>
+      <div class="sepsis" id="sepsisBox" hidden></div>
+      <div class="btns">
+        <button type="button" id="copy" class="primary">結果をコピー</button>
+        <button type="button" id="reset">クリア</button>
+      </div>
+    </div>
+  </aside>
+  </div>
+</div>
+
+<script>
+// 採点ロジック: Matics & Sanchez-Pinto, JAMA Pediatr 2017 Table 1
+const MAP_THR = [46, 55, 60, 62, 65, 67, 70];            // 年齢群ごとの MAP 閾値（未満で1点）
+const CR_THR = [                                         // クレアチニン(mg/dL) 1〜4点の下限
+  [0.8, 1.0, 1.2, 1.6],   // <1か月
+  [0.3, 0.5, 0.8, 1.2],   // 1-11か月
+  [0.4, 0.6, 1.1, 1.5],   // 12-23か月
+  [0.6, 0.9, 1.6, 2.3],   // 24-59か月
+  [0.7, 1.1, 1.8, 2.6],   // 60-143か月
+  [1.0, 1.7, 2.9, 4.2],   // 144-216か月
+  [1.2, 2.0, 3.5, 5.0]    // >216か月
+];
+const AGE_LABEL = ["1か月未満","1–11か月","12–23か月","24–59か月","60–143か月","144–216か月（12–18歳）","18歳超"];
+
+const $ = id => document.getElementById(id);
+const val = id => { const s = $(id).value.trim(); if (s === "") return NaN; const n = Number(s); return Number.isFinite(n) ? n : NaN; };
+const fmt = n => (Math.round(n * 100) / 100).toString();
+const NAMES = {resp:"呼吸", coag:"凝固", liver:"肝", cv:"循環", neuro:"神経", renal:"腎"};
+
+function ageGroup(){
+  const a = val("age"); if (isNaN(a) || a < 0) return null;
+  const u = $("ageUnit").value;
+  const months = u === "d" ? a / 30.4375 : u === "m" ? a : a * 12;
+  let g;
+  if (months < 1) g = 0; else if (months < 12) g = 1; else if (months < 24) g = 2;
+  else if (months < 60) g = 3; else if (months < 144) g = 4; else if (months <= 216) g = 5; else g = 6;
+  return {g, months};
+}
+
+// 各関数は {s: 点数, d: 説明, miss: 未入力か} を返す
+function respiratory(){
+  const mode = document.querySelector('input[name=rmode]:checked').value;
+  const fio2 = val("fio2"), support = $("support").checked;
+  const r = {s:0, d:"", miss:false, note:""};
+  let ratio, t;
+  if (mode === "pf"){
+    const p = val("pao2");
+    if (isNaN(p) || isNaN(fio2) || fio2 <= 0){ r.miss = true; r.d = "PaO₂ と FiO₂ を入力"; return r; }
+    ratio = p / (fio2 / 100); t = [400, 300, 200, 100];
+    r.d = "PaO₂/FiO₂ = " + fmt(ratio);
+  } else {
+    const sp = val("spo2");
+    if (isNaN(sp) || isNaN(fio2) || fio2 <= 0){ r.miss = true; r.d = "SpO₂ と FiO₂ を入力"; return r; }
+    if (sp > 97){ r.miss = true; r.d = "SpO₂ >97% は使用不可"; r.note = "SpO₂/FiO₂ は SpO₂ が97%以下の値のみ使用します（論文の規定）。97%超のため採点していません（0点扱い）。"; return r; }
+    ratio = sp / (fio2 / 100); t = [292, 264, 221, 148];
+    r.d = "SpO₂/FiO₂ = " + fmt(ratio);
+  }
+  let s = ratio >= t[0] ? 0 : ratio >= t[1] ? 1 : ratio >= t[2] ? 2 : ratio >= t[3] ? 3 : 4;
+  if (s >= 3 && !support){
+    s = 2;
+    r.note = "比の値は3点以上の範囲ですが、3・4点は呼吸補助ありの場合のみ付くため2点としています。";
+  }
+  r.s = s; return r;
+}
+function coag(){
+  const p = val("plt"); if (isNaN(p)) return {s:0, miss:true, d:""};
+  const s = p < 20 ? 4 : p < 50 ? 3 : p < 100 ? 2 : p < 150 ? 1 : 0;
+  return {s, miss:false, d:"血小板 " + fmt(p) + " ×10³/μL"};
+}
+function liver(){
+  let b = val("bili"); if (isNaN(b)) return {s:0, miss:true, d:""};
+  if ($("biliUnit").value === "umol") b = b / 17.104;
+  const s = b >= 12 ? 4 : b >= 6 ? 3 : b >= 2 ? 2 : b >= 1.2 ? 1 : 0;
+  return {s, miss:false, d:"ビリルビン " + fmt(b) + " mg/dL"};
+}
+function cardio(){
+  const ag = ageGroup();
+  const dopa = val("dopa"), dobu = val("dobu"), epi = val("epi"), nor = val("nor");
+  const any = [dopa, dobu, epi, nor].some(x => !isNaN(x) && x > 0);
+  let s = 0, d = "";
+  if (!isNaN(dopa) && dopa > 15 || !isNaN(epi) && epi > 0.1 || !isNaN(nor) && nor > 0.1){ s = 4; d = "血管作動薬: ドパミン>15 / アドレナリン>0.1 / ノルアドレナリン>0.1"; }
+  else if (!isNaN(dopa) && dopa > 5 || !isNaN(epi) && epi > 0 || !isNaN(nor) && nor > 0){ s = 3; d = "血管作動薬: ドパミン>5 / アドレナリン≤0.1 / ノルアドレナリン≤0.1"; }
+  else if (!isNaN(dopa) && dopa > 0 || !isNaN(dobu) && dobu > 0){ s = 2; d = "血管作動薬: ドパミン≤5 またはドブタミン（任意の量）"; }
+  else {
+    const m = val("map");
+    if (isNaN(m)) return {s:0, miss:true, d:"", vaso:any};
+    if (!ag) return {s:0, miss:true, d:"MAP の判定には年齢が必要", vaso:any};
+    const thr = MAP_THR[ag.g];
+    s = m < thr ? 1 : 0;
+    d = "MAP " + fmt(m) + "（" + AGE_LABEL[ag.g] + "の基準 " + thr + " mmHg）";
+  }
+  // 薬剤で点数が決まった場合でも MAP は参照しない（論文: MAPは0・1点、薬剤は2〜4点）
+  return {s, miss:false, d, vaso:any};
+}
+function neuro(){
+  const g = $("gcs").value; if (g === "") return {s:0, miss:true, d:""};
+  const n = Number(g);
+  const s = n === 15 ? 0 : n >= 13 ? 1 : n >= 10 ? 2 : n >= 6 ? 3 : 4;
+  return {s, miss:false, d:"GCS " + n};
+}
+function renal(){
+  let c = val("cr"); if (isNaN(c)) return {s:0, miss:true, d:""};
+  const ag = ageGroup(); if (!ag) return {s:0, miss:true, d:"腎の判定には年齢が必要"};
+  if ($("crUnit").value === "umol") c = c / 88.4;
+  const s = CR_THR[ag.g].filter(t => c >= t).length;
+  return {s, miss:false, d:"Cr " + fmt(c) + " mg/dL（" + AGE_LABEL[ag.g] + "）"};
+}
+
+let lastText = "";
+function update(){
+  // 入力欄の切替
+  const sf = document.querySelector('input[name=rmode]:checked').value === "sf";
+  $("l-pao2").hidden = sf; $("l-spo2").hidden = !sf;
+
+  const ag = ageGroup();
+  $("ageInfo").textContent = ag ? "年齢群: " + AGE_LABEL[ag.g] + "（" + fmt(ag.months) + "か月）" : "循環（MAP）と腎（クレアチニン）の年齢群の判定に使います。";
+
+  const res = {resp:respiratory(), coag:coag(), liver:liver(), cv:cardio(), neuro:neuro(), renal:renal()};
+  let total = 0; const missing = [];
+  for (const k in res){
+    const r = res[k]; total += r.s;
+    const b = $("b-" + k);
+    b.textContent = r.miss ? "–" : r.s;
+    b.className = "badge" + (r.miss ? "" : " b" + r.s);
+    $("d-" + k).textContent = r.miss ? (r.d || "未入力（正常＝0点として扱う）") : r.d;
+    $("s-" + k).textContent = r.miss ? "未入力 (0)" : r.s + " 点";
+    if (r.miss) missing.push(NAMES[k]);
+  }
+  const nr = $("n-resp"); nr.hidden = !res.resp.note; nr.textContent = res.resp.note || "";
+  $("total").textContent = total;
+  $("missing").textContent = missing.length ? "未入力（0点扱い）: " + missing.join("・") : "全項目入力済み";
+
+  // Sepsis-3
+  const box = $("sepsisBox");
+  const infect = $("infect").checked;
+  let sepText = "";
+  if (infect){
+    const base = isNaN(val("base")) ? 0 : val("base");
+    const delta = total - base;
+    const sepsis = delta >= 2;
+    let lac = val("lac"); if (!isNaN(lac) && $("lacUnit").value === "mg") lac = lac / 9;
+    const vaso = res.cv.vaso;
+    let msg;
+    if (!sepsis){ msg = "sepsis の基準を満たさない"; }
+    else if (vaso && !isNaN(lac) && lac > 2){ msg = "septic shock の基準を満たす"; }
+    else { msg = "sepsis の基準を満たす"; }
+    const sub = "pSOFA の上昇 " + (delta >= 0 ? "+" : "") + delta + "（基準 ≥2）" +
+      (sepsis ? "／血管作動薬 " + (vaso ? "あり" : "なし") + "／乳酸 " + (isNaN(lac) ? "未入力" : fmt(lac) + " mmol/L（基準 >2）") : "");
+    box.hidden = false; box.innerHTML = "<strong></strong><span></span>";
+    box.firstChild.textContent = msg; box.lastChild.textContent = sub;
+    sepText = "Sepsis-3: " + msg + "（" + sub + "）";
+  } else box.hidden = true;
+
+  lastText = "pSOFA " + total + "/24\n" +
+    Object.keys(res).map(k => NAMES[k] + " " + (res[k].miss ? "未入力" : res[k].s) + (res[k].d && !res[k].miss ? "（" + res[k].d + "）" : "")).join("\n") +
+    (sepText ? "\n" + sepText : "") +
+    "\n出典: Matics TJ, Sanchez-Pinto LN. JAMA Pediatr 2017;171(10):e172352";
+}
+
+document.querySelectorAll("input,select").forEach(e => { e.addEventListener("input", update); e.addEventListener("change", update); });
+$("reset").addEventListener("click", () => {
+  document.querySelectorAll("input[type=number]").forEach(e => e.value = "");
+  $("base").value = 0;
+  document.querySelectorAll("input[type=checkbox]").forEach(e => e.checked = false);
+  $("gcs").value = ""; $("ageUnit").value = "y"; $("biliUnit").value = "mg"; $("crUnit").value = "mg"; $("lacUnit").value = "mmol";
+  document.querySelector('input[name=rmode][value=pf]').checked = true;
+  update();
+});
+$("copy").addEventListener("click", async () => {
+  const btn = $("copy");
+  try { await navigator.clipboard.writeText(lastText); btn.textContent = "コピーしました"; }
+  catch(e){ btn.textContent = "コピーできませんでした"; }
+  setTimeout(() => btn.textContent = "結果をコピー", 1600);
+});
+update();
+</script>
+</body>
+</html>
